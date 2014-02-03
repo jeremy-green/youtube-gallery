@@ -1,0 +1,61 @@
+/* line 4, ../scss/main.scss */
+.yt-gallery-header {
+  margin-bottom: 4.16667%;
+}
+/* line 7, ../scss/main.scss */
+.yt-gallery-header .yt-gallery-h2 {
+  margin: 1.69492% 0;
+}
+/* line 11, ../scss/main.scss */
+.yt-gallery-header .yt-gallery-video {
+  height: 0;
+  padding-bottom: 56.25%;
+  /* 16:9 */
+  position: relative;
+}
+/* line 16, ../scss/main.scss */
+.yt-gallery-header .yt-gallery-video iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* line 25, ../scss/main.scss */
+.yt-gallery-column {
+  width: 32.20339%;
+  float: left;
+  margin-right: 1.69492%;
+  display: inline;
+  margin-bottom: 4.16667%;
+}
+/* line 27, ../scss/main.scss */
+.yt-gallery-column:nth-child(3n) {
+  float: right;
+  margin-right: 0;
+  *margin-left: -1em;
+  display: inline;
+}
+/* line 30, ../scss/main.scss */
+.yt-gallery-column:nth-child(3n+1) {
+  clear: both;
+}
+/* line 38, ../scss/main.scss */
+.yt-gallery-column img {
+  max-width: 100%;
+  height: auto;
+}
+
+@media all and (max-width: 480px) {
+  /* line 45, ../scss/main.scss */
+  .yt-gallery-column {
+    display: block;
+    float: none;
+    margin-left: 0;
+    margin-right: 0;
+    width: 100%;
+  }
+}

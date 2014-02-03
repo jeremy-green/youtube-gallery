@@ -1,0 +1,196 @@
+<?php
+function youtube_gallery_menu() {
+  $settings = variable_get('youtube_gallery_settings', array());
+  $items['admin/config/services/youtube-gallery'] = array(
+      'title' => 'Youtube Gallery',
+      'description' => 'A Youtube gallery.',
+      'type' => MENU_NORMAL_ITEM,
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('youtube_gallery_options'),
+      'access arguments' => array('access content')
+  );
+  $items[$settings['youtube_path']] = array(
+      //'title' => 'Videos',
+      'type' => MENU_NORMAL_ITEM,
+      'page callback' => 'youtube_gallery_page',
+      'access arguments' => array('access content')
+  );
+  return $items;
+}
+
+function youtube_gallery_options() {
+  $settings = variable_get('youtube_gallery_settings', array());
+
+  $form = array();
+  $form['#tree'] = TRUE;
+
+  $form['youtube_gallery_settings']['youtube_id'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Youtube ID'),
+      '#description' => t('The Youtube ID'),
+      '#default_value' => !empty($settings['youtube_id']) ? $settings['youtube_id'] : '',
+      '#maxlength' => 255,
+      '#required' => TRUE
+  );
+  $form['youtube_gallery_settings']['youtube_max_results'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Youtube Max Results'),
+    '#description' => t('The number of results returned from the API <em>The limit is 50</em>.'),
+    '#default_value' => !empty($settings['youtube_max_results']) ? $settings['youtube_max_results'] : 9
+  );
+  $form['youtube_gallery_settings']['youtube_path'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Youtube Path'),
+    '#description' => t('The path for the video page'),
+    '#default_value' => !empty($settings['youtube_path']) ? $settings['youtube_path'] : '',
+    '#maxlength' => 255,
+    '#required' => TRUE
+  );
+  $form['submit'] = array(
+      '#type' => 'submit',
+      '#value' => 'Save Configuration',
+  );
+
+  return $form;
+}
+
+function youtube_gallery_options_validate(&$form, &$form_state) {
+  $values = $form_state['values'];
+  if ((int)$values['youtube_gallery_settings']['youtube_max_results'] > 50) {
+    form_set_error('youtube_max_results', 'The maximum allowed results is 50');
+  }
+}
+
+function youtube_gallery_options_submit(&$form, &$form_state) {
+  $values = $form_state['values'];
+  variable_set('youtube_gallery_settings', $values['youtube_gallery_settings']);
+  drupal_set_message('Your settings have been saved.');
+}
+
+function _youtube_gallery_build_query($id, $start_index = 1, $max_results = 1) {
+  return 'http://gdata.youtube.com/feeds/api/users/' . $id . '/uploads?start-index=' . $start_index . '&max-results=' . $max_results . '&v=2&alt=jsonc';
+}
+
+function youtube_gallery_page() {
+  $settings = variable_get('youtube_gallery_settings', array());
+  $id = $settings['youtube_id'];
+
+  $max_results = $settings['youtube_max_results'];
+  $offset = 1;
+  $start_index = (isset($_GET['page']) && check_plain($_GET['page'])) ? (check_plain($_GET['page']) * $max_results) + $offset : $offset;
+
+  $url = _youtube_gallery_build_query($id, $start_index, $max_results);
+
+  $path = drupal_get_path('module', 'youtube_gallery');
+  drupal_add_css($path . '/assets/shadowbox.css');
+  drupal_add_css($path . '/css/main.css');
+  drupal_add_js($path . '/assets/shadowbox.js');
+  drupal_add_js($path . '/js/main.js');
+
+  $resp = drupal_http_request($url);
+  $data = json_decode($resp->data);
+  $data = $data->data;
+  $total_items = $data->totalItems;
+
+  $entries = $data->items;
+  $output = '<div class="node node-page view-mode-full"><div class="field field-name-title field-type-ds field-label-hidden"><div class="field-items"><div class="field-item even" property="dc:title"><h1>Videos</h1></div></div></div><div class="field-name-body">';
+
+  //$output .= _youtube_gallery_format_header($entries[0]);
+  $output .= _youtube_gallery_get_first_item($id);
+
+  $output .= '<div class="yt-gallery-container">';
+  foreach ($entries as $key => $entry) {
+    $output .= _youtube_gallery_format_item($entry);
+  }
+  $output .= '</div></div></div>';
+
+// Initialize the pager
+$current_page = pager_default_initialize($total_items, $max_results);
+// Split your list into page sized chunks
+//$chunks = array_chunk($total_items, $max_results, TRUE);
+// Show the appropriate items from the list
+//$output .= theme('table', array('header' => $header, 'rows' => $chunks[$current_page]));
+// Show the pager
+$output .= theme('pager');
+
+  return $output;
+}
+
+function _youtube_gallery_get_first_item($id) {
+  $url = _youtube_gallery_build_query($id);
+  $resp = drupal_http_request($url);
+  $data = json_decode($resp->data);
+  $data = $data->data;
+  $entries = $data->items;
+  return _youtube_gallery_format_header($entries[0]);
+}
+
+/**
+* Override or insert variables into the html template.
+*/
+function youtube_gallery_preprocess_html(&$vars) {
+  if (current_path() === 'media-news/videos') {
+    $vars['head_title'] = 'Videos ' . $vars['head_title'];
+  }
+}
+
+function _youtube_gallery_format_header($entry) {
+  $id = $entry->id;
+  $item = '<div class="yt-gallery-header">';
+  $item .= '<h2 class="yt-gallery-h2">' . $entry->title . '</h2>';
+  $item .= '<div class="yt-gallery-video">';
+  $item .= '<iframe id="" data-videoid="' . $id . '" data-playerimplementation="youtube" data-videoprovidername="youtube" class="youtube-player" width="660" height="371" type="text/html" src="http://www.youtube.com/embed/' . $id . '?wmode=opaque&amp;autohide=2&amp;autoplay=0&amp;enablejsapi=1&amp;fs=1&amp;loop=0&amp;modestbranding=1&amp;rel=0&amp;showinfo=0" frameborder="0"></iframe>';
+  $item .= '</div></div>';
+  return $item;
+}
+
+function _youtube_gallery_format_item($entry) {
+  $m_href = isset($entry->player->mobile) ? $entry->player->mobile : $entry->player->default ;
+
+  $id = $entry->id;
+
+  $item = '';
+  $duration = _youtube_gallery_secs_to_h((int)$entry->duration);
+  $item .= '<div class="yt-gallery-column">';
+  $item .= '<div class=""><a data-mobile-href="' . $m_href . '" href="' . $entry->content->{5} .'" rel="shadowbox;width=660;height=371;player=swf">';
+  $item .= '<img src="' . $entry->thumbnail->hqDefault . '" />';
+  $item .= '</a></div>';
+  $item .= '<h2 class=""><a data-mobile-href="' . $m_href . '" href="' . $entry->content->{5} .'" rel="shadowbox;width=660;height=371;player=swf">' . $entry->title . '</a></h2>';
+  //$item .= '<div class=""><p>' . $entry->content . '</p></div>';
+  $item .= '<div class=""><em>' . $duration . '</em></div>';
+  $item .= '<div class=""><em>View count: ' . $entry->viewCount . '</em></div>';
+
+  $item .= '</div>';
+
+  return $item;
+}
+
+function _youtube_gallery_secs_to_v($secs) {
+  $units = array(
+    "weeks"   => 7*24*3600,
+    "days"    =>   24*3600,
+    "hours"   =>      3600,
+    "minutes" =>        60,
+    "seconds" =>         1,
+  );
+
+  foreach ( $units as &$unit ) {
+    $quot  = intval($secs / $unit);
+    $secs -= $quot * $unit;
+    $unit  = $quot;
+  }
+
+  return $units;
+}
+
+function _youtube_gallery_secs_to_h($secs) {
+  $s = "";
+
+  foreach ( _youtube_gallery_secs_to_v($secs) as $k => $v ) {
+    if ( $v ) {
+      $s .= $v." ".($v==1? substr($k,0,-1) : $k).", ";
+    }
+  }
+
+  return substr($s, 0, -2);
+}

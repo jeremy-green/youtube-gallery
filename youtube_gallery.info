@@ -1,0 +1,6 @@
+name = Youtube Gallery
+description = A Youtube gallery that behaves like http://www.gregabbott.com/media-news/videos/
+core = 7.x
+package = Taoti
+
+dependencies[] = modernizr
