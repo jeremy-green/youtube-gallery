@@ -1,5 +1,5 @@
 name = Youtube Gallery
-description = A Youtube gallery that behaves like http://www.gregabbott.com/media-news/videos/
+description = A Youtube gallery.
 core = 7.x
 package = Taoti
 
